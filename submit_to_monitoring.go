@@ -21,8 +21,9 @@ func sendToGCPMonitoring(mf map[string]*dto.MetricFamily, config map[string]*str
 
 		fmt.Println(v.GetType())
 
+		ctx := context.Background()
+
 		if v.GetType() == dto.MetricType_GAUGE {
-			dataPoints := []*monitoringpb.Point{}
 			for _, m := range v.GetMetric() {
 				if m == nil {
 					continue
@@ -31,8 +32,6 @@ func sendToGCPMonitoring(mf map[string]*dto.MetricFamily, config map[string]*str
 				for _, l := range m.GetLabel() {
 					labels[*l.Name] = *l.Value
 				}
-				dataPoints = append(dataPoints)
-				ctx := context.Background()
 
 				client, err := monitoring.NewMetricClient(ctx)
 				if err != nil {
@@ -69,121 +68,67 @@ func sendToGCPMonitoring(mf map[string]*dto.MetricFamily, config map[string]*str
 				}); err != nil {
 					log.Fatalf("Failed to write time series data: %v", err)
 				}
+				time.Sleep(1000)
 				if err := client.Close(); err != nil {
 					log.Fatalf("Failed to close client: %v", err)
 				}
 			}
 		}
 
-		// if v.GetType() == dto.MetricType_COUNTER {
-		// 	dataPoints := []*monitoringpb.Point{}
-		// 	labels := make(map[string]string)
-		// 	for _, m := range v.GetMetric() {
-		// 		if m == nil {
-		// 			continue
-		// 		}
-		// 		for _, l := range m.GetLabel() {
-		// 			labels[*l.Name] = *l.Value
-		// 		}
-		// 		dataPoints = append(dataPoints, &monitoringpb.Point{
-		// 			Interval: &monitoringpb.TimeInterval{
-		// 				EndTime: &googlepb.Timestamp{
-		// 					Seconds: time.Now().Unix(),
-		// 				},
-		// 			},
-		// 			Value: &monitoringpb.TypedValue{
-		// 				Value: &monitoringpb.TypedValue_DoubleValue{
-		// 					DoubleValue: m.Counter.GetValue(),
-		// 				},
-		// 			},
-		// 		})
-		// 	}
-		// 	ctx := context.Background()
+		if v.GetType() == dto.MetricType_COUNTER {
+			for _, m := range v.GetMetric() {
+				if m == nil {
+					continue
+				}
+				labels := make(map[string]string)
+				for _, l := range m.GetLabel() {
+					labels[*l.Name] = *l.Value
+				}
 
-		// 	client, err := monitoring.NewMetricClient(ctx)
-		// 	if err != nil {
-		// 		log.Fatalf("Failed to create client: %v", err)
-		// 	}
-		// 	if err := client.CreateTimeSeries(ctx, &monitoringpb.CreateTimeSeriesRequest{
-		// 		Name: fmt.Sprintf("projects/%s", *config["PROJECT_ID"]),
-		// 		TimeSeries: []*monitoringpb.TimeSeries{
-		// 			{
-		// 				Metric: &metricpb.Metric{
-		// 					Type:   fmt.Sprintf("custom.googleapis.com/%s/%s", *config["SERVICE"], *v.Name),
-		// 					Labels: labels,
-		// 				},
-		// 				Resource: &monitoredrespb.MonitoredResource{
-		// 					Type:   "global",
-		// 					Labels: labels,
-		// 				},
-		// 				Points:     dataPoints,
-		// 				MetricKind: metricpb.MetricDescriptor_CUMULATIVE,
-		// 			},
-		// 		},
-		// 	}); err != nil {
-		// 		log.Fatalf("Failed to write time series data: %v", err)
-		// 	}
-		// 	if err := client.Close(); err != nil {
-		// 		log.Fatalf("Failed to close client: %v", err)
-		// 	}
-		// }
-
-		// if v.GetType() == dto.MetricType_COUNTER {
-		// 	for _, m := range v.GetMetric() {
-		// 		if m == nil {
-		// 			continue
-		// 		}
-		// 		labels := make(map[string]string)
-		// 		config["project_id"] = config["PROJECT_ID"]
-		// 		for _, l := range m.GetLabel() {
-		// 			config[*l.Name] = l.Value
-		// 		}
-		// 		ctx := context.Background()
-
-		// 		client, err := monitoring.NewMetricClient(ctx)
-		// 		if err != nil {
-		// 			log.Fatalf("Failed to create client: %v", err)
-		// 		}
-
-		// 		fmt.Println(m.Counter.GetValue())
-		// 		dataPoint := &monitoringpb.Point{
-		// 			Interval: &monitoringpb.TimeInterval{
-		// 				EndTime: &googlepb.Timestamp{
-		// 					Seconds: time.Now().Unix(),
-		// 				},
-		// 			},
-		// 			Value: &monitoringpb.TypedValue{
-		// 				Value: &monitoringpb.TypedValue_DoubleValue{
-		// 					DoubleValue: m.Counter.GetValue(),
-		// 				},
-		// 			},
-		// 		}
-		// 		if err := client.CreateTimeSeries(ctx, &monitoringpb.CreateTimeSeriesRequest{
-		// 			Name: fmt.Sprintf("projects/%s", *config["PROJECT_ID"]),
-		// 			TimeSeries: []*monitoringpb.TimeSeries{
-		// 				{
-		// 					Metric: &metricpb.Metric{
-		// 						Type:   fmt.Sprintf("custom.googleapis.com/%s/%s", *config["SERVICE"], *v.Name),
-		// 						Labels: labels,
-		// 					},
-		// 					Resource: &monitoredrespb.MonitoredResource{
-		// 						Type:   "global",
-		// 						Labels: labels,
-		// 					},
-		// 					Points: []*monitoringpb.Point{
-		// 						dataPoint,
-		// 					},
-		// 					MetricKind: metricpb.MetricDescriptor_CUMULATIVE,
-		// 				},
-		// 			},
-		// 		}); err != nil {
-		// 			log.Fatalf("Failed to write time series data: %v", err)
-		// 		}
-		// 		if err := client.Close(); err != nil {
-		// 			log.Fatalf("Failed to close client: %v", err)
-		// 		}
-		// 	}
-		// }
+				client, err := monitoring.NewMetricClient(ctx)
+				if err != nil {
+					log.Fatalf("Failed to create client: %v", err)
+				}
+				if err := client.CreateTimeSeries(ctx, &monitoringpb.CreateTimeSeriesRequest{
+					Name: fmt.Sprintf("projects/%s", *config["PROJECT_ID"]),
+					TimeSeries: []*monitoringpb.TimeSeries{
+						{
+							Metric: &metricpb.Metric{
+								Type:   fmt.Sprintf("custom.googleapis.com/%s/%s", *config["SERVICE"], *v.Name),
+								Labels: labels,
+							},
+							Resource: &monitoredrespb.MonitoredResource{
+								Type: "global",
+							},
+							Points: []*monitoringpb.Point{
+								{
+									Interval: &monitoringpb.TimeInterval{
+										StartTime: &googlepb.Timestamp{
+											Seconds: time.Now().Unix(),
+										},
+										EndTime: &googlepb.Timestamp{
+											Seconds: time.Now().Add(time.Second * time.Duration(1)).Unix(),
+										},
+									},
+									Value: &monitoringpb.TypedValue{
+										Value: &monitoringpb.TypedValue_DoubleValue{
+											DoubleValue: m.Counter.GetValue(),
+										},
+									},
+								},
+							},
+							MetricKind: metricpb.MetricDescriptor_CUMULATIVE,
+						},
+					},
+				}); err != nil {
+					log.Fatalf("Failed to write time series data: %v", err)
+				}
+				time.Sleep(1000)
+				if err := client.Close(); err != nil {
+					log.Fatalf("Failed to close client: %v", err)
+				}
+			}
+		}
 		fmt.Printf("Done writing time series data.\n")
 	}
 }
